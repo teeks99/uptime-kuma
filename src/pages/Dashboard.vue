@@ -1,11 +1,15 @@
 <template>
     <div class="container-fluid">
-        <div class="row flex-nowrap" style="height: 100%;">
+        <div class="row flex-nowrap" style="height: 100%">
             <div
                 v-if="!$root.isMobile"
                 ref="leftPane"
                 class="ps-0 flex-shrink-0"
-                :style="{ width: leftPaneWidth + 'px', flex: '0 0 ' + leftPaneWidth + 'px', maxWidth: leftPaneWidth + 'px' }"
+                :style="{
+                    width: leftPaneWidth + 'px',
+                    flex: '0 0 ' + leftPaneWidth + 'px',
+                    maxWidth: leftPaneWidth + 'px',
+                }"
             >
                 <div>
                     <router-link to="/add" class="btn btn-primary mb-3">
@@ -17,13 +21,9 @@
             </div>
 
             <!-- Resizer Handle -->
-            <div
-                v-if="!$root.isMobile"
-                class="resizer"
-                @mousedown.prevent="initResize"
-            ></div>
+            <div v-if="!$root.isMobile" class="resizer" @mousedown.prevent="initResize"></div>
 
-            <div ref="container" class="col mb-3 gx-0" style="min-width: 0;">
+            <div ref="container" class="col mb-3 gx-0" style="min-width: 0">
                 <!-- Add :key to disable vue router re-use the same component -->
                 <router-view :key="$route.fullPath" :calculatedHeight="height" />
             </div>
@@ -47,7 +47,7 @@ export default {
     },
     mounted() {
         this.height = this.$refs.container.offsetHeight;
-        
+
         const savedWidth = localStorage.getItem("leftPaneWidth");
         if (savedWidth) {
             this.leftPaneWidth = parseInt(savedWidth);
@@ -65,11 +65,15 @@ export default {
             if (this.isResizing && this.$refs.leftPane) {
                 const containerLeft = this.$refs.leftPane.getBoundingClientRect().left;
                 let newWidth = e.clientX - containerLeft;
-                
+
                 // Bounds checking
-                if (newWidth < 250) newWidth = 250;
-                if (newWidth > window.innerWidth * 0.8) newWidth = window.innerWidth * 0.8;
-                
+                if (newWidth < 250) {
+                    newWidth = 250;
+                }
+                if (newWidth > window.innerWidth * 0.8) {
+                    newWidth = window.innerWidth * 0.8;
+                }
+
                 this.leftPaneWidth = newWidth;
             }
         },
@@ -100,8 +104,9 @@ export default {
     z-index: 10;
     transition: background-color 0.2s;
     border-radius: 4px;
-    
-    &:hover, &:active {
+
+    &:hover,
+    &:active {
         background-color: var(--bs-primary);
         opacity: 0.5;
     }

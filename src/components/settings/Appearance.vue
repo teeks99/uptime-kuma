@@ -114,9 +114,7 @@
                         autocomplete="off"
                         value="normal"
                     />
-                    <label class="btn btn-outline-primary" for="btncheckLayoutNormal">
-                        Normal
-                    </label>
+                    <label class="btn btn-outline-primary" for="btncheckLayoutNormal">Normal</label>
 
                     <input
                         id="btncheckLayoutCompact"
@@ -127,9 +125,7 @@
                         autocomplete="off"
                         value="compact"
                     />
-                    <label class="btn btn-outline-primary" for="btncheckLayoutCompact">
-                        Compact
-                    </label>
+                    <label class="btn btn-outline-primary" for="btncheckLayoutCompact">Compact</label>
                 </div>
             </div>
         </div>

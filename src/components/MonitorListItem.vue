@@ -23,7 +23,11 @@
 
             <router-link :to="monitorURL(monitor.id)" class="item" :class="{ disabled: !monitor.active }">
                 <div class="row flex-nowrap align-items-center">
-                    <div class="small-padding d-flex gap-2 align-items-center" :class="monitorStyle" style="min-width: 0;">
+                    <div
+                        class="small-padding d-flex gap-2 align-items-center"
+                        :class="monitorStyle"
+                        style="min-width: 0"
+                    >
                         <div class="me-1">
                             <Uptime :monitor="monitor" type="24" :pill="true" />
                         </div>
@@ -46,7 +50,7 @@
                     <div
                         v-show="$root.userHeartbeatBar == 'normal'"
                         :key="$root.userHeartbeatBar"
-                        style="width: 150px; flex: 0 0 150px;"
+                        style="width: 150px; flex: 0 0 150px"
                     >
                         <HeartbeatBar ref="heartbeatBar" size="small" :monitor-id="monitor.id" />
                     </div>
@@ -382,7 +386,7 @@ export default {
 }
 
 :global(.ui-compact) .monitor-list .drag-over .item {
-    padding: 0px 11px 0px 11px;
+    padding: 0 11px 0 11px;
 }
 
 .draggable-item {
