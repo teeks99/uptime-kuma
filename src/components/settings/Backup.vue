@@ -1,3 +1,4 @@
+<!--Comment to get CI kicked off -->
 <template>
     <div>
         <div class="my-4">
@@ -13,12 +14,17 @@
         <div class="my-4">
             <h3 class="mb-3">{{ $t("Restore") }}</h3>
             <div class="alert alert-warning">
-                <strong>{{ $t("Warning:") }}</strong> {{ $t("Importing a backup will merge the monitors and configurations into your current account. Ensure that you want to duplicate or recreate these items before proceeding.") }}
+                <strong>{{ $t("Warning:") }}</strong>
+                {{
+                    $t(
+                        "Importing a backup will merge the monitors and configurations into your current account. Ensure that you want to duplicate or recreate these items before proceeding."
+                    )
+                }}
             </div>
-            
+
             <div class="mb-3">
                 <label for="restoreFile" class="form-label">{{ $t("Select JSON file") }}</label>
-                <input class="form-control" type="file" id="restoreFile" accept=".json" @change="onFileChange" />
+                <input id="restoreFile" class="form-control" type="file" accept=".json" @change="onFileChange" />
             </div>
 
             <button class="btn btn-danger" type="button" :disabled="!restoreData" @click="restoreBackup">
@@ -39,7 +45,8 @@ export default {
         exportBackup() {
             this.$root.getSocket().emit("backupData", (res) => {
                 if (res.ok) {
-                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(res.backup, null, 2));
+                    const dataStr =
+                        "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(res.backup, null, 2));
                     const downloadAnchorNode = document.createElement("a");
                     downloadAnchorNode.setAttribute("href", dataStr);
                     downloadAnchorNode.setAttribute("download", "uptimekuma-backup.json");
@@ -74,13 +81,19 @@ export default {
                 return;
             }
 
-            if (confirm(this.$t("Are you sure you want to restore? This will import monitors and settings into your account."))) {
+            if (
+                confirm(
+                    this.$t(
+                        "Are you sure you want to restore? This will import monitors and settings into your account."
+                    )
+                )
+            ) {
                 this.$root.getSocket().emit("restoreData", this.restoreData, (res) => {
                     this.$root.toastRes(res);
                     if (res.ok) {
                         this.restoreData = null;
                         document.getElementById("restoreFile").value = "";
-                        
+
                         setTimeout(() => {
                             location.reload();
                         }, 2000);

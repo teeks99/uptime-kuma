@@ -193,7 +193,6 @@ const { SetupDatabase } = require("./setup-database");
 const { chartSocketHandler } = require("./socket-handlers/chart-socket-handler");
 const { backupSocketHandler } = require("./socket-handlers/backup-socket-handler");
 
-
 app.use(express.json());
 
 // Global Middleware
@@ -1721,7 +1720,6 @@ let needSetup = false;
         generalSocketHandler(socket, server);
         chartSocketHandler(socket);
         backupSocketHandler(socket);
-
 
         log.debug("server", "added all socket handlers");
 

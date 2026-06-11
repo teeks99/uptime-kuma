@@ -13,7 +13,7 @@ module.exports.backupSocketHandler = (socket) => {
     socket.on("backupData", async (callback) => {
         try {
             checkLogin(socket);
-            
+
             const userID = socket.userID;
             if (!userID) {
                 throw new Error("User ID is not defined");
@@ -25,7 +25,7 @@ module.exports.backupSocketHandler = (socket) => {
             const maintenances = await R.findAll("maintenance", " AND user_id = ? ", [userID]);
             const notifications = await R.findAll("notification", " AND user_id = ? ", [userID]);
 
-            const monitorIds = monitors.map(m => m.id);
+            const monitorIds = monitors.map((m) => m.id);
             let monitorTags = [];
             let monitorGroups = [];
             let monitorNotifications = [];
@@ -35,47 +35,59 @@ module.exports.backupSocketHandler = (socket) => {
             let maintenanceTimeslots = [];
 
             if (monitorIds.length > 0) {
-                const placeholders = monitorIds.map(() => '?').join(',');
+                const placeholders = monitorIds.map(() => "?").join(",");
                 monitorTags = await R.findAll("monitor_tag", ` AND monitor_id IN (${placeholders}) `, monitorIds);
                 monitorGroups = await R.findAll("monitor_group", ` AND monitor_id IN (${placeholders}) `, monitorIds);
-                monitorNotifications = await R.findAll("monitor_notification", ` AND monitor_id IN (${placeholders}) `, monitorIds);
-                
-                const tagIds = [...new Set(monitorTags.map(mt => mt.tag_id))];
+                monitorNotifications = await R.findAll(
+                    "monitor_notification",
+                    ` AND monitor_id IN (${placeholders}) `,
+                    monitorIds
+                );
+
+                const tagIds = [...new Set(monitorTags.map((mt) => mt.tag_id))];
                 if (tagIds.length > 0) {
-                    const tagPlaceholders = tagIds.map(() => '?').join(',');
+                    const tagPlaceholders = tagIds.map(() => "?").join(",");
                     tags = await R.findAll("tag", ` AND id IN (${tagPlaceholders}) `, tagIds);
                 }
 
-                const groupIds = [...new Set(monitorGroups.map(mg => mg.group_id))];
+                const groupIds = [...new Set(monitorGroups.map((mg) => mg.group_id))];
                 if (groupIds.length > 0) {
-                    const groupPlaceholders = groupIds.map(() => '?').join(',');
+                    const groupPlaceholders = groupIds.map(() => "?").join(",");
                     groups = await R.findAll("group", ` AND id IN (${groupPlaceholders}) `, groupIds);
                 }
             }
 
-            const maintenanceIds = maintenances.map(m => m.id);
+            const maintenanceIds = maintenances.map((m) => m.id);
             if (maintenanceIds.length > 0) {
-                const placeholders = maintenanceIds.map(() => '?').join(',');
-                maintenanceTimeslots = await R.findAll("maintenance_timeslot", ` AND maintenance_id IN (${placeholders}) `, maintenanceIds);
-                monitorMaintenances = await R.findAll("monitor_maintenance", ` AND maintenance_id IN (${placeholders}) `, maintenanceIds);
+                const placeholders = maintenanceIds.map(() => "?").join(",");
+                maintenanceTimeslots = await R.findAll(
+                    "maintenance_timeslot",
+                    ` AND maintenance_id IN (${placeholders}) `,
+                    maintenanceIds
+                );
+                monitorMaintenances = await R.findAll(
+                    "monitor_maintenance",
+                    ` AND maintenance_id IN (${placeholders}) `,
+                    maintenanceIds
+                );
             }
 
             const backupData = {
                 version: "1.0",
                 data: {
-                    monitor: monitors.map(b => b.export()),
-                    proxy: proxies.map(b => b.export()),
-                    docker_host: docker_hosts.map(b => b.export()),
-                    maintenance: maintenances.map(b => b.export()),
-                    notification: notifications.map(b => b.export()),
-                    monitor_tag: monitorTags.map(b => b.export()),
-                    monitor_group: monitorGroups.map(b => b.export()),
-                    monitor_notification: monitorNotifications.map(b => b.export()),
-                    monitor_maintenance: monitorMaintenances.map(b => b.export()),
-                    tag: tags.map(b => b.export()),
-                    group: groups.map(b => b.export()),
-                    maintenance_timeslot: maintenanceTimeslots.map(b => b.export())
-                }
+                    monitor: monitors.map((b) => b.export()),
+                    proxy: proxies.map((b) => b.export()),
+                    docker_host: docker_hosts.map((b) => b.export()),
+                    maintenance: maintenances.map((b) => b.export()),
+                    notification: notifications.map((b) => b.export()),
+                    monitor_tag: monitorTags.map((b) => b.export()),
+                    monitor_group: monitorGroups.map((b) => b.export()),
+                    monitor_notification: monitorNotifications.map((b) => b.export()),
+                    monitor_maintenance: monitorMaintenances.map((b) => b.export()),
+                    tag: tags.map((b) => b.export()),
+                    group: groups.map((b) => b.export()),
+                    maintenance_timeslot: maintenanceTimeslots.map((b) => b.export()),
+                },
             };
 
             callback({
@@ -111,12 +123,12 @@ module.exports.backupSocketHandler = (socket) => {
                 tag: {},
                 group: {},
                 maintenance: {},
-                monitor: {}
+                monitor: {},
             };
 
             await R.knex.transaction(async (trx) => {
                 // Restore logic: map old ID to new ID as we insert
-                
+
                 // 1. Global Entities
                 // tags
                 if (data.tag) {
@@ -129,7 +141,9 @@ module.exports.backupSocketHandler = (socket) => {
                         } else {
                             const tagData = {};
                             for (const k of Object.keys(oldTag)) {
-                                if (allowedKeys.includes(k) && k !== "id") tagData[k] = oldTag[k];
+                                if (allowedKeys.includes(k) && k !== "id") {
+                                    tagData[k] = oldTag[k];
+                                }
                             }
                             const [newId] = await trx("tag").insert(tagData);
                             idMap.tag[oldTag.id] = newId;
@@ -148,7 +162,9 @@ module.exports.backupSocketHandler = (socket) => {
                         } else {
                             const groupData = {};
                             for (const k of Object.keys(oldGroup)) {
-                                if (allowedKeys.includes(k) && k !== "id") groupData[k] = oldGroup[k];
+                                if (allowedKeys.includes(k) && k !== "id") {
+                                    groupData[k] = oldGroup[k];
+                                }
                             }
                             const [newId] = await trx("group").insert(groupData);
                             idMap.group[oldGroup.id] = newId;
@@ -158,14 +174,18 @@ module.exports.backupSocketHandler = (socket) => {
 
                 // 2. User-Scoped Independent Entities
                 const userScopedInsert = async (table, items) => {
-                    if (!items) return;
+                    if (!items) {
+                        return;
+                    }
                     const columns = await trx(table).columnInfo();
                     const allowedKeys = Object.keys(columns);
                     for (const item of items) {
                         const oldId = item.id;
                         const itemData = {};
                         for (const k of Object.keys(item)) {
-                            if (allowedKeys.includes(k) && k !== "id") itemData[k] = item[k];
+                            if (allowedKeys.includes(k) && k !== "id") {
+                                itemData[k] = item[k];
+                            }
                         }
                         itemData.user_id = userID;
                         const [newId] = await trx(table).insert(itemData);
@@ -187,7 +207,9 @@ module.exports.backupSocketHandler = (socket) => {
                         if (newMaintenanceId) {
                             const itemData = {};
                             for (const k of Object.keys(item)) {
-                                if (allowedKeys.includes(k) && k !== "id") itemData[k] = item[k];
+                                if (allowedKeys.includes(k) && k !== "id") {
+                                    itemData[k] = item[k];
+                                }
                             }
                             itemData.maintenance_id = newMaintenanceId;
                             await trx("maintenance_timeslot").insert(itemData);
@@ -203,7 +225,9 @@ module.exports.backupSocketHandler = (socket) => {
                         const oldId = item.id;
                         const itemData = {};
                         for (const k of Object.keys(item)) {
-                            if (allowedKeys.includes(k) && k !== "id") itemData[k] = item[k];
+                            if (allowedKeys.includes(k) && k !== "id") {
+                                itemData[k] = item[k];
+                            }
                         }
                         itemData.user_id = userID;
 
@@ -215,7 +239,7 @@ module.exports.backupSocketHandler = (socket) => {
                         }
 
                         // We delay parent ID mapping since the parent monitor might not be inserted yet
-                        
+
                         const [newId] = await trx("monitor").insert(itemData);
                         idMap.monitor[oldId] = newId;
                     }
@@ -234,7 +258,9 @@ module.exports.backupSocketHandler = (socket) => {
 
                 // 5. Monitor Relations
                 const relationInsert = async (table, items, foreignKey1, foreignKey2, map1, map2) => {
-                    if (!items) return;
+                    if (!items) {
+                        return;
+                    }
                     const columns = await trx(table).columnInfo();
                     const allowedKeys = Object.keys(columns);
                     for (const item of items) {
@@ -243,7 +269,9 @@ module.exports.backupSocketHandler = (socket) => {
                         if (newFk1 && newFk2) {
                             const itemData = {};
                             for (const k of Object.keys(item)) {
-                                if (allowedKeys.includes(k) && k !== "id") itemData[k] = item[k];
+                                if (allowedKeys.includes(k) && k !== "id") {
+                                    itemData[k] = item[k];
+                                }
                             }
                             itemData[foreignKey1] = newFk1;
                             itemData[foreignKey2] = newFk2;
@@ -253,9 +281,30 @@ module.exports.backupSocketHandler = (socket) => {
                 };
 
                 await relationInsert("monitor_tag", data.monitor_tag, "monitor_id", "tag_id", idMap.monitor, idMap.tag);
-                await relationInsert("monitor_group", data.monitor_group, "monitor_id", "group_id", idMap.monitor, idMap.group);
-                await relationInsert("monitor_notification", data.monitor_notification, "monitor_id", "notification_id", idMap.monitor, idMap.notification);
-                await relationInsert("monitor_maintenance", data.monitor_maintenance, "monitor_id", "maintenance_id", idMap.monitor, idMap.maintenance);
+                await relationInsert(
+                    "monitor_group",
+                    data.monitor_group,
+                    "monitor_id",
+                    "group_id",
+                    idMap.monitor,
+                    idMap.group
+                );
+                await relationInsert(
+                    "monitor_notification",
+                    data.monitor_notification,
+                    "monitor_id",
+                    "notification_id",
+                    idMap.monitor,
+                    idMap.notification
+                );
+                await relationInsert(
+                    "monitor_maintenance",
+                    data.monitor_maintenance,
+                    "monitor_id",
+                    "maintenance_id",
+                    idMap.monitor,
+                    idMap.maintenance
+                );
             });
 
             // Need to broadcast to the UI to update lists and restart monitors
@@ -265,7 +314,7 @@ module.exports.backupSocketHandler = (socket) => {
             client.sendDockerHostList(socket);
             client.sendNotificationList(socket);
             server.sendMaintenanceList(socket);
-            
+
             // start the new monitors
             if (data.monitor) {
                 const s = require("../uptime-kuma-server").UptimeKumaServer.getInstance();
@@ -284,7 +333,7 @@ module.exports.backupSocketHandler = (socket) => {
 
             callback({
                 ok: true,
-                msg: "Import completed successfully."
+                msg: "Import completed successfully.",
             });
         } catch (error) {
             log.error("backup", error);
