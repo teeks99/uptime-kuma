@@ -22,8 +22,8 @@
             </div>
 
             <router-link :to="monitorURL(monitor.id)" class="item" :class="{ disabled: !monitor.active }">
-                <div class="row">
-                    <div class="small-padding d-flex gap-2 align-items-center" :class="monitorStyle">
+                <div class="row flex-nowrap align-items-center">
+                    <div class="small-padding d-flex gap-2 align-items-center" :class="monitorStyle" style="min-width: 0;">
                         <div class="me-1">
                             <Uptime :monitor="monitor" type="24" :pill="true" />
                         </div>
@@ -46,7 +46,7 @@
                     <div
                         v-show="$root.userHeartbeatBar == 'normal'"
                         :key="$root.userHeartbeatBar"
-                        class="col-3 col-xl-6"
+                        style="width: 150px; flex: 0 0 150px;"
                     >
                         <HeartbeatBar ref="heartbeatBar" size="small" :monitor-id="monitor.id" />
                     </div>
@@ -166,8 +166,9 @@ export default {
             const isFullWidth = this.$root.userHeartbeatBar === "bottom" || this.$root.userHeartbeatBar === "none";
             const c = {};
             if (!isFullWidth) {
-                c["col-9"] = true;
-                c["col-xl-6"] = true;
+                c["col"] = true;
+            } else {
+                c["col-12"] = true;
             }
             return c;
         },
