@@ -359,6 +359,10 @@ export default {
     z-index: 15;
 }
 
+:global(.ui-compact) .select-input-wrapper {
+    margin-top: 9px;
+}
+
 .drag-over {
     border: 4px dashed $primary;
     border-radius: 0.5rem;
@@ -376,6 +380,10 @@ export default {
     padding: 9px 11px 6px 11px;
 }
 
+:global(.ui-compact) .monitor-list .drag-over .item {
+    padding: 0px 11px 0px 11px;
+}
+
 .draggable-item {
     cursor: grab;
     position: relative;
@@ -384,6 +392,11 @@ export default {
     .item {
         padding: 12px 15px;
         transition: none !important;
+    }
+
+    :global(.ui-compact) & .item {
+        padding: 2px 15px;
+        font-size: 75%;
     }
 
     &.dragging {

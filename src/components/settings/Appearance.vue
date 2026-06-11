@@ -101,6 +101,39 @@
             </div>
         </div>
 
+        <div class="my-4">
+            <label class="form-label">Monitor List Layout</label>
+            <div>
+                <div class="btn-group" role="group">
+                    <input
+                        id="btncheckLayoutNormal"
+                        v-model="$root.userMonitorListLayout"
+                        type="radio"
+                        class="btn-check"
+                        name="monitorListLayout"
+                        autocomplete="off"
+                        value="normal"
+                    />
+                    <label class="btn btn-outline-primary" for="btncheckLayoutNormal">
+                        Normal
+                    </label>
+
+                    <input
+                        id="btncheckLayoutCompact"
+                        v-model="$root.userMonitorListLayout"
+                        type="radio"
+                        class="btn-check"
+                        name="monitorListLayout"
+                        autocomplete="off"
+                        value="compact"
+                    />
+                    <label class="btn btn-outline-primary" for="btncheckLayoutCompact">
+                        Compact
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- Timeline -->
         <div class="my-4">
             <label class="form-label">{{ $t("styleElapsedTime") }}</label>
