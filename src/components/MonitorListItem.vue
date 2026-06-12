@@ -364,9 +364,11 @@ export default {
     z-index: 15;
 }
 
+/* stylelint-disable selector-pseudo-class-no-unknown */
 :global(.ui-compact) .select-input-wrapper {
     margin-top: 9px;
 }
+/* stylelint-enable selector-pseudo-class-no-unknown */
 
 .drag-over {
     border: 4px dashed $primary;
@@ -385,9 +387,11 @@ export default {
     padding: 9px 11px 6px 11px;
 }
 
+/* stylelint-disable selector-pseudo-class-no-unknown */
 :global(.ui-compact) .monitor-list .drag-over .item {
     padding: 0 11px 0 11px;
 }
+/* stylelint-enable selector-pseudo-class-no-unknown */
 
 .draggable-item {
     cursor: grab;
@@ -399,10 +403,12 @@ export default {
         transition: none !important;
     }
 
+    /* stylelint-disable selector-pseudo-class-no-unknown */
     :global(.ui-compact) & .item {
         padding: 2px 15px;
         font-size: 75%;
     }
+    /* stylelint-enable selector-pseudo-class-no-unknown */
 
     &.dragging {
         cursor: grabbing;
