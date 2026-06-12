@@ -1,6 +1,9 @@
 name: Nightly Release
 
 on:
+  push:
+    branches:
+      - docker-build
   schedule:
     # Runs at 2:00 AM UTC every day
     - cron: "0 2 * * *"
@@ -20,7 +23,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          ref: docker-build
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
@@ -59,3 +64,5 @@ jobs:
 
       - name: Run release-nightly
         run: npm run release-nightly
+        env:
+          RELEASE_REPO_NAMES: "teeks99/uptime-kuma"
