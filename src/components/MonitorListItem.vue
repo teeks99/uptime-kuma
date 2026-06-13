@@ -22,8 +22,12 @@
             </div>
 
             <router-link :to="monitorURL(monitor.id)" class="item" :class="{ disabled: !monitor.active }">
-                <div class="row">
-                    <div class="small-padding d-flex gap-2 align-items-center" :class="monitorStyle">
+                <div class="row flex-nowrap align-items-center">
+                    <div
+                        class="small-padding d-flex gap-2 align-items-center"
+                        :class="monitorStyle"
+                        style="min-width: 0"
+                    >
                         <div class="me-1">
                             <Uptime :monitor="monitor" type="24" :pill="true" />
                         </div>
@@ -46,7 +50,7 @@
                     <div
                         v-show="$root.userHeartbeatBar == 'normal'"
                         :key="$root.userHeartbeatBar"
-                        class="col-3 col-xl-6"
+                        style="width: 150px; flex: 0 0 150px"
                     >
                         <HeartbeatBar ref="heartbeatBar" size="small" :monitor-id="monitor.id" />
                     </div>
@@ -166,8 +170,9 @@ export default {
             const isFullWidth = this.$root.userHeartbeatBar === "bottom" || this.$root.userHeartbeatBar === "none";
             const c = {};
             if (!isFullWidth) {
-                c["col-9"] = true;
-                c["col-xl-6"] = true;
+                c["col"] = true;
+            } else {
+                c["col-12"] = true;
             }
             return c;
         },
@@ -359,6 +364,12 @@ export default {
     z-index: 15;
 }
 
+/* stylelint-disable selector-pseudo-class-no-unknown */
+:global(.ui-compact) .select-input-wrapper {
+    margin-top: 9px;
+}
+/* stylelint-enable selector-pseudo-class-no-unknown */
+
 .drag-over {
     border: 4px dashed $primary;
     border-radius: 0.5rem;
@@ -376,6 +387,12 @@ export default {
     padding: 9px 11px 6px 11px;
 }
 
+/* stylelint-disable selector-pseudo-class-no-unknown */
+:global(.ui-compact) .monitor-list .drag-over .item {
+    padding: 0 11px 0 11px;
+}
+/* stylelint-enable selector-pseudo-class-no-unknown */
+
 .draggable-item {
     cursor: grab;
     position: relative;
@@ -385,6 +402,13 @@ export default {
         padding: 12px 15px;
         transition: none !important;
     }
+
+    /* stylelint-disable selector-pseudo-class-no-unknown */
+    :global(.ui-compact) & .item {
+        padding: 2px 15px;
+        font-size: 75%;
+    }
+    /* stylelint-enable selector-pseudo-class-no-unknown */
 
     &.dragging {
         cursor: grabbing;
