@@ -8,7 +8,7 @@ on:
   push:
     branches: ["**"]
   pull_request:
-  workflow_dispatch: # This doesn't work 1
+  workflow_dispatch: # This doesn't work 2
 permissions: {}
 
 jobs:
