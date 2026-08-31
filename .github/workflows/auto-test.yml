@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [master, 1.23.X, 3.0.0]
+    branches: [master, 1.23.X, 3.0.0, docker-build]
   pull_request:
 permissions: {}
 
