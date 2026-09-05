@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [master, 1.23.X, 3.0.0]
+    branches: [master, 1.23.X, 3.0.0, docker-build]
   pull_request:
 permissions: {}
 
@@ -62,6 +62,7 @@ jobs:
         env:
           HEADLESS_TEST: 1
           JUST_FOR_TEST: ${{ secrets.JUST_FOR_TEST }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
 
   # As a lot of dev dependencies are not supported on ARMv7, we have to test it separately and just test if `npm ci --production` works
   armv7-simple-test:

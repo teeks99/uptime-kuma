@@ -100,4 +100,11 @@ export default {
 .badge {
     min-width: 62px;
 }
+
+.ui-compact .badge {
+    min-width: 30px !important;
+    padding: 1px 4px !important;
+    font-size: 0.75rem !important;
+    line-height: 1 !important;
+}
 </style>
