@@ -291,6 +291,7 @@ export default {
             // Email - Email services
             let email = {
                 Brevo: "Brevo",
+                MicrosoftGraph: this.$t("Microsoft Graph Email"),
                 Resend: "Resend",
                 SendGrid: "SendGrid",
                 smtp: this.$t("smtp"),
@@ -318,6 +319,7 @@ export default {
             // Home Automation - Smart home and IoT platforms
             let homeAutomation = {
                 HomeAssistant: "Home Assistant",
+                Indigo: "Indigo",
             };
 
             // Other Integrations
@@ -343,6 +345,7 @@ export default {
                 ServerChan: "ServerChan (Server酱)",
                 PushPlus: "PushPlus (推送加)",
                 SpugPush: "SpugPush（Spug推送助手）",
+                amootsms: "Amoot SMS",
                 smsc: "SMSC",
                 smsir: "SMS.IR",
                 WPush: "WPush(wpush.cn)",

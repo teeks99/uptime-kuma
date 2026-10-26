@@ -13,9 +13,9 @@ const dayjs = require("dayjs");
 const { UP, MAINTENANCE, DOWN, PENDING, flipStatus, log, badgeConstants } = require("../../src/util");
 const StatusPage = require("../model/status_page");
 const { UptimeKumaServer } = require("../uptime-kuma-server");
+const { emitHeartbeat } = require("../heartbeat-emit");
 const { makeBadge } = require("badge-maker");
 const { Prometheus } = require("../prometheus");
-const Database = require("../database");
 const { UptimeCalculator } = require("../uptime-calculator");
 const { Settings } = require("../settings");
 
@@ -52,6 +52,10 @@ router.all("/api/push/:pushToken", async (request, response) => {
         let statusString = request.query.status || "up";
         const statusFromParam = statusString === "up" ? UP : DOWN;
 
+        // Check if status=down was explicitly provided (not defaulting to "up")
+        // When explicitly pushing down, bypass retry logic and go directly to DOWN
+        const isExplicitDown = request.query.status === "down";
+
         // Validate ping value - max 100 billion ms (~3.17 years)
         // Fits safely in both BIGINT and FLOAT(20,2)
         const MAX_PING_MS = 100000000000;
@@ -85,7 +89,14 @@ router.all("/api/push/:pushToken", async (request, response) => {
             msg = "Monitor under maintenance";
             bean.status = MAINTENANCE;
         } else {
-            determineStatus(statusFromParam, previousHeartbeat, monitor.maxretries, monitor.isUpsideDown(), bean);
+            determineStatus(
+                statusFromParam,
+                previousHeartbeat,
+                monitor.maxretries,
+                monitor.isUpsideDown(),
+                bean,
+                isExplicitDown
+            );
         }
 
         // Calculate uptime
@@ -124,9 +135,9 @@ router.all("/api/push/:pushToken", async (request, response) => {
 
         await R.store(bean);
 
-        io.to(monitor.user_id).emit("heartbeat", bean.toJSON());
+        emitHeartbeat(io, bean.toJSON());
 
-        Monitor.sendStats(io, monitor.id, monitor.user_id);
+        Monitor.sendStats(io, monitor.id);
 
         try {
             new Prometheus(monitor, await monitor.getTags()).update(bean, undefined);
@@ -255,6 +266,7 @@ router.get("/api/badge/:id/uptime/:duration?", cache("5 minutes"), async (reques
             badgeValues.color = badgeConstants.naColor;
         } else {
             const uptimeCalculator = await UptimeCalculator.getUptimeCalculator(requestedMonitorId);
+            await uptimeCalculator.ensureHistoryLoaded();
             const uptime = overrideValue ?? uptimeCalculator.getDataByDuration(requestedDuration).uptime;
 
             // limit the displayed uptime percentage to four (two, when displayed as percent) decimal digits
@@ -321,6 +333,7 @@ router.get("/api/badge/:id/ping/:duration?", cache("5 minutes"), async (request,
             badgeValues.color = badgeConstants.naColor;
         } else {
             const uptimeCalculator = await UptimeCalculator.getUptimeCalculator(requestedMonitorId);
+            await uptimeCalculator.ensureHistoryLoaded();
             const avgPing = uptimeCalculator.getDataByDuration(requestedDuration).avgPing;
             const avgPingValue = parseInt(overrideValue ?? avgPing);
 
@@ -370,31 +383,23 @@ router.get("/api/badge/:id/avg-response/:duration?", cache("5 minutes"), async (
         const requestedDuration = Math.min(request.params.duration ? parseInt(request.params.duration, 10) : 24, 720);
         const overrideValue = value && parseFloat(value);
 
-        const sqlHourOffset = Database.sqlHourOffset();
+        const publicMonitor = await isMonitorPublic(requestedMonitorId);
 
-        const publicAvgPing = parseInt(
-            await R.getCell(
-                `
-            SELECT AVG(ping) FROM monitor_group, \`group\`, heartbeat
-            WHERE monitor_group.group_id = \`group\`.id
-            AND heartbeat.time > ${sqlHourOffset}
-            AND heartbeat.ping IS NOT NULL
-            AND public = 1
-            AND heartbeat.monitor_id = ?
-            `,
-                [-requestedDuration, requestedMonitorId]
-            )
-        );
+        let avgPing;
+
+        if (publicMonitor) {
+            const uptimeCalculator = await UptimeCalculator.getUptimeCalculator(requestedMonitorId);
+            await uptimeCalculator.ensureHistoryLoaded();
+            avgPing = uptimeCalculator.getDataByDuration(`${requestedDuration}h`).avgPing;
+        }
 
         const badgeValues = { style };
 
-        if (!publicAvgPing) {
-            // return a "N/A" badge in naColor (grey), if monitor is not public / not available / non existent
-
+        if (!publicMonitor || !avgPing) {
             badgeValues.message = "N/A";
             badgeValues.color = badgeConstants.naColor;
         } else {
-            const avgPing = parseInt(overrideValue ?? publicAvgPing);
+            const avgPingValue = parseInt(overrideValue ?? avgPing);
 
             badgeValues.color = color;
             // use a given, custom labelColor or use the default badge label color (defined by badge-maker)
@@ -405,7 +410,7 @@ router.get("/api/badge/:id/avg-response/:duration?", cache("5 minutes"), async (
                 label ?? `Avg. Response (${requestedDuration}h)`,
                 labelSuffix,
             ]);
-            badgeValues.message = filterAndJoin([prefix, avgPing, suffix]);
+            badgeValues.message = filterAndJoin([prefix, avgPingValue, suffix]);
         }
 
         // build the SVG based on given values
@@ -568,11 +573,19 @@ router.get("/api/badge/:id/response", cache("5 minutes"), async (request, respon
  * @param {number} maxretries - The maximum number of retries allowed.
  * @param {boolean} isUpsideDown - Indicates if the monitor is upside down.
  * @param {object} bean - The new heartbeat object.
+ * @param {boolean} isExplicitDown - If status=down was explicitly pushed, bypass retries.
  * @returns {void}
  */
-function determineStatus(status, previousHeartbeat, maxretries, isUpsideDown, bean) {
+function determineStatus(status, previousHeartbeat, maxretries, isUpsideDown, bean, isExplicitDown) {
     if (isUpsideDown) {
         status = flipStatus(status);
+    }
+
+    // If status=down was explicitly pushed, bypass retry logic and go directly to DOWN
+    if (isExplicitDown && status === DOWN) {
+        bean.retries = 0;
+        bean.status = DOWN;
+        return;
     }
 
     if (previousHeartbeat) {

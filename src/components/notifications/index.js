@@ -25,6 +25,7 @@ import Gotify from "./Gotify.vue";
 import GrafanaOncall from "./GrafanaOncall.vue";
 import GtxMessaging from "./GtxMessaging.vue";
 import HomeAssistant from "./HomeAssistant.vue";
+import Indigo from "./Indigo.vue";
 import HeiiOnCall from "./HeiiOnCall.vue";
 import Keep from "./Keep.vue";
 import Kook from "./Kook.vue";
@@ -69,6 +70,7 @@ import Squadcast from "./Squadcast.vue";
 import SMSEagle from "./SMSEagle.vue";
 import Stackfield from "./Stackfield.vue";
 import STMP from "./SMTP.vue";
+import MicrosoftGraph from "./MicrosoftGraph.vue";
 import Teams from "./Teams.vue";
 import TechulusPush from "./TechulusPush.vue";
 import Telegram from "./Telegram.vue";
@@ -96,6 +98,7 @@ import SendGrid from "./SendGrid.vue";
 import TurboSMTP from "./TurboSMTP.vue";
 import Brevo from "./Brevo.vue";
 import YZJ from "./YZJ.vue";
+import AmootSMS from "./AmootSMS.vue";
 import SMSPlanet from "./SMSPlanet.vue";
 import SMSIR from "./SMSIR.vue";
 import Webpush from "./Webpush.vue";
@@ -122,6 +125,7 @@ const NotificationFormList = {
     ClickUp: ClickUp,
     clicksendsms: ClickSendSMS,
     CallMeBot: CallMeBot,
+    amootsms: AmootSMS,
     smsc: SMSC,
     smsir: SMSIR,
     DingDing: DingDing,
@@ -137,6 +141,7 @@ const NotificationFormList = {
     gotify: Gotify,
     GrafanaOncall: GrafanaOncall,
     HomeAssistant: HomeAssistant,
+    Indigo: Indigo,
     HeiiOnCall: HeiiOnCall,
     Keep: Keep,
     Kook: Kook,
@@ -181,6 +186,7 @@ const NotificationFormList = {
     squadcast: Squadcast,
     SMSEagle: SMSEagle,
     smtp: STMP,
+    MicrosoftGraph: MicrosoftGraph,
     stackfield: Stackfield,
     teams: Teams,
     telegram: Telegram,
