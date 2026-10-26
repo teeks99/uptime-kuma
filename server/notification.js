@@ -26,6 +26,7 @@ const Gorush = require("./notification-providers/gorush");
 const Gotify = require("./notification-providers/gotify");
 const GrafanaOncall = require("./notification-providers/grafana-oncall");
 const HomeAssistant = require("./notification-providers/home-assistant");
+const Indigo = require("./notification-providers/indigo");
 const HeiiOnCall = require("./notification-providers/heii-oncall");
 const Keep = require("./notification-providers/keep");
 const Kook = require("./notification-providers/kook");
@@ -66,6 +67,7 @@ const SMSPartner = require("./notification-providers/smspartner");
 const SMSEagle = require("./notification-providers/smseagle");
 const SMSGateway = require("./notification-providers/sms-gateway");
 const SMTP = require("./notification-providers/smtp");
+const MicrosoftGraph = require("./notification-providers/microsoft-graph");
 const Squadcast = require("./notification-providers/squadcast");
 const Stackfield = require("./notification-providers/stackfield");
 const Teams = require("./notification-providers/teams");
@@ -97,6 +99,7 @@ const TurboSMTP = require("./notification-providers/turbosmtp");
 const Brevo = require("./notification-providers/brevo");
 const Resend = require("./notification-providers/resend");
 const YZJ = require("./notification-providers/yzj");
+const AmootSMS = require("./notification-providers/amootsms");
 const SMSPlanet = require("./notification-providers/sms-planet");
 const SpugPush = require("./notification-providers/spugpush");
 const SMSIR = require("./notification-providers/smsir");
@@ -149,6 +152,7 @@ class Notification {
             new Gotify(),
             new GrafanaOncall(),
             new HomeAssistant(),
+            new Indigo(),
             new HeiiOnCall(),
             new Keep(),
             new Kook(),
@@ -192,6 +196,7 @@ class Notification {
             new SMSEagle(),
             new SMSGateway(),
             new SMTP(),
+            new MicrosoftGraph(),
             new Squadcast(),
             new Stackfield(),
             new Teams(),
@@ -218,6 +223,7 @@ class Notification {
             new Brevo(),
             new Resend(),
             new YZJ(),
+            new AmootSMS(),
             new SMSPlanet(),
             new SpugPush(),
             new Notifery(),
@@ -272,7 +278,7 @@ class Notification {
         let bean;
 
         if (notificationID) {
-            bean = await R.findOne("notification", " id = ? AND user_id = ? ", [notificationID, userID]);
+            bean = await R.findOne("notification", " id = ? ", [notificationID]);
 
             if (!bean) {
                 throw new Error("notification not found");
@@ -292,7 +298,7 @@ class Notification {
         await R.store(bean);
 
         if (applyExisting) {
-            await applyNotificationEveryMonitor(bean.id, userID);
+            await applyNotificationEveryMonitor(bean.id);
         }
 
         return bean;
@@ -301,11 +307,10 @@ class Notification {
     /**
      * Delete a notification
      * @param {number} notificationID ID of notification to delete
-     * @param {number} userID ID of user who created notification
      * @returns {Promise<void>}
      */
-    static async delete(notificationID, userID) {
-        let bean = await R.findOne("notification", " id = ? AND user_id = ? ", [notificationID, userID]);
+    static async delete(notificationID) {
+        let bean = await R.findOne("notification", " id = ? ", [notificationID]);
 
         if (!bean) {
             throw new Error("notification not found");
@@ -326,11 +331,10 @@ class Notification {
 /**
  * Apply the notification to every monitor
  * @param {number} notificationID ID of notification to apply
- * @param {number} userID ID of user who created notification
  * @returns {Promise<void>}
  */
-async function applyNotificationEveryMonitor(notificationID, userID) {
-    let monitors = await R.getAll("SELECT id FROM monitor WHERE user_id = ?", [userID]);
+async function applyNotificationEveryMonitor(notificationID) {
+    let monitors = await R.getAll("SELECT id FROM monitor");
 
     for (let i = 0; i < monitors.length; i++) {
         let checkNotification = await R.findOne("monitor_notification", " monitor_id = ? AND notification_id = ? ", [

@@ -15,14 +15,17 @@
                     <label for="floatingInput">{{ $t("Username") }}</label>
                 </div>
 
-                <div v-if="!tokenRequired" class="mt-3">
-                    <HiddenInput
+                <div v-if="!tokenRequired" class="form-floating mt-3">
+                    <input
                         id="floatingPassword"
                         v-model="password"
-                        :placeholder="$t('Password')"
+                        type="password"
+                        class="form-control"
+                        placeholder="Password"
                         autocomplete="current-password"
-                        :required="true"
+                        required
                     />
+                    <label for="floatingPassword">{{ $t("Password") }}</label>
                 </div>
 
                 <div v-if="tokenRequired">
@@ -70,12 +73,9 @@
 </template>
 
 <script>
-import HiddenInput from "./HiddenInput.vue";
+import { login, verifyTotp } from "../auth-client";
 
 export default {
-    components: {
-        HiddenInput,
-    },
     data() {
         return {
             processing: false,
@@ -110,18 +110,24 @@ export default {
          * Submit the user details and attempt to log in
          * @returns {void}
          */
-        submit() {
+        async submit() {
             this.processing = true;
 
-            this.$root.login(this.username, this.password, this.token, (res) => {
-                this.processing = false;
-
-                if (res.tokenRequired) {
-                    this.tokenRequired = true;
-                } else {
-                    this.res = res;
+            try {
+                if (this.tokenRequired) {
+                    await verifyTotp(this.token);
+                    return;
                 }
-            });
+
+                const result = await login(this.username, this.password, this.$root.remember);
+                if (result === "twoFactorRequired") {
+                    this.tokenRequired = true;
+                }
+            } catch (e) {
+                this.res = { ok: false, msg: e.message };
+            } finally {
+                this.processing = false;
+            }
         },
     },
 };
