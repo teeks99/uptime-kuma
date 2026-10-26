@@ -5,9 +5,11 @@ const { log } = require("../src/util");
 const { loginRateLimiter, apiRateLimiter } = require("./rate-limiter");
 const { Settings } = require("./settings");
 const dayjs = require("dayjs");
+const { checkPassword, verifyApiKey: verifyBetterAuthAPIKey } = require("./better-auth");
 
 /**
- * Login to web app
+ * @deprecated DO NOT CALL IT. Use Better Auth instead.
+ * Old Login function, keep it for migration purposes.
  * @param {string} username Username to login with
  * @param {string} password Password to login with
  * @returns {Promise<(Bean|null)>} User or null if login failed
@@ -36,16 +38,35 @@ exports.login = async function (username, password) {
 /**
  * Validate a provided API key
  * @param {string} key API key to verify
- * @returns {boolean} API is ok?
+ * @returns {Promise<boolean>} API is ok?
  */
 async function verifyAPIKey(key) {
     if (typeof key !== "string") {
         return false;
     }
 
+    // Better Auth API keys
+    if (await verifyBetterAuthAPIKey(key)) {
+        return true;
+    }
+
+    // Legacy API keys, kept in the old `api_key` table
+    return await verifyLegacyAPIKey(key);
+}
+
+/**
+ * Verify a legacy API key (uk<id>_<clear>, bcrypt hash in the old `api_key` table)
+ * @param {string} key API key to verify
+ * @returns {Promise<boolean>} API is ok?
+ */
+async function verifyLegacyAPIKey(key) {
     // uk prefix + key ID is before _
     let index = key.substring(2, key.indexOf("_"));
     let clear = key.substring(key.indexOf("_") + 1, key.length);
+
+    if (!index || !clear) {
+        return false;
+    }
 
     let hash = await R.findOne("api_key", " id=? ", [index]);
 
@@ -59,7 +80,7 @@ async function verifyAPIKey(key) {
         return false;
     }
 
-    return hash && passwordHash.verify(clear, hash.key);
+    return passwordHash.verify(clear, hash.key);
 }
 
 /**
@@ -107,14 +128,19 @@ function userAuthorizer(username, password, callback) {
     // Login Rate Limit
     loginRateLimiter.pass(null, 0).then((pass) => {
         if (pass) {
-            exports.login(username, password).then((user) => {
-                callback(null, user != null);
+            checkPassword(username, password)
+                .then((valid) => {
+                    callback(null, valid);
 
-                if (user == null) {
-                    log.warn("basic-auth", "Failed basic auth attempt: invalid username/password");
-                    loginRateLimiter.removeTokens(1);
-                }
-            });
+                    if (!valid) {
+                        log.warn("basic-auth", "Failed basic auth attempt: invalid username/password");
+                        loginRateLimiter.removeTokens(1);
+                    }
+                })
+                .catch((e) => {
+                    log.error("basic-auth", "Auth error:", e);
+                    callback(null, false);
+                });
         } else {
             log.warn("basic-auth", "Failed basic auth attempt: rate limit exceeded");
             callback(null, false);
@@ -174,3 +200,6 @@ exports.apiAuth = async function (req, res, next) {
         next();
     }
 };
+
+// Exported for tests
+exports.verifyAPIKey = verifyAPIKey;

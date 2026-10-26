@@ -25,11 +25,7 @@
                     </router-link>
 
                     <!-- Logout Button -->
-                    <a
-                        v-if="$root.isMobile && $root.loggedIn && $root.socket.token !== 'autoLogin'"
-                        class="logout"
-                        @click.prevent="$root.logout"
-                    >
+                    <a v-if="$root.isMobile && $root.loggedIn" class="logout" @click.prevent="$root.logout">
                         <div class="menu-item">
                             <font-awesome-icon icon="sign-out-alt" />
                             {{ $t("Logout") }}
@@ -173,6 +169,10 @@ export default {
 
                 if (this.settings.nscd === undefined) {
                     this.settings.nscd = true;
+                }
+
+                if (this.settings.prometheusApiEnabled === undefined) {
+                    this.settings.prometheusApiEnabled = false;
                 }
 
                 if (this.settings.keepDataPeriodDays === undefined) {
