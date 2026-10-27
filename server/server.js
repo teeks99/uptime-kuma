@@ -454,6 +454,10 @@ app.use(function (req, res, next) {
 
                 monitor.rabbitmqNodes = JSON.stringify(monitor.rabbitmqNodes);
 
+                // Config is never imported as a whole, only its known keys are copied
+                const clientConfig = monitor.config;
+                delete monitor.config;
+
                 /*
                  * List of frontend-only properties that should not be saved to the database.
                  * Should clean up before saving to the database.
@@ -470,6 +474,7 @@ app.use(function (req, res, next) {
                 }
 
                 bean.import(monitor);
+                bean.applyClientConfig(clientConfig);
                 // Map camelCase frontend property to snake_case database column
                 if (monitor.retryOnlyOnStatusCodeFailure !== undefined) {
                     bean.retry_only_on_status_code_failure = monitor.retryOnlyOnStatusCodeFailure;
@@ -638,7 +643,10 @@ app.use(function (req, res, next) {
                 bean.rabbitmqPassword = monitor.rabbitmqPassword;
                 bean.conditions = JSON.stringify(monitor.conditions);
                 bean.manual_status = monitor.manual_status;
-                bean.system_service_name = monitor.system_service_name;
+
+                // Known config keys only, so a payload never replaces the whole config
+                bean.applyClientConfig(monitor.config);
+
                 bean.sshUsername = monitor.sshUsername;
                 bean.sshPassword = monitor.sshPassword;
                 bean.sftpPath = monitor.sftpPath;
