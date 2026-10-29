@@ -191,6 +191,10 @@ export default {
                     this.settings.trustProxy = false;
                 }
 
+                if (this.settings.apiEnabled === undefined) {
+                    this.settings.apiEnabled = false;
+                }
+
                 this.settingsLoaded = true;
             });
         },
