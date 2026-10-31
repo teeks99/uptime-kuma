@@ -100,4 +100,13 @@ export default {
 .badge {
     min-width: 62px;
 }
+
+.ui-compact .badge {
+    /* Wide enough for "100.00%" so every badge in the list is the same width */
+    min-width: 56px !important;
+    padding: 1px 4px !important;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.75rem !important;
+    line-height: 1 !important;
+}
 </style>

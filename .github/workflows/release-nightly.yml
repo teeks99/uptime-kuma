@@ -1,6 +1,9 @@
 name: Nightly Release
 
 on:
+  push:
+    branches:
+      - docker-build
   schedule:
     # Runs at 2:00 AM UTC every day
     - cron: "0 2 * * *"
@@ -11,7 +14,7 @@ permissions: {}
 jobs:
   release-nightly:
     # Only run on the original repository, not on forks
-    if: github.repository == 'louislam/uptime-kuma'
+    if: github.repository == 'teeks99/uptime-kuma'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -20,7 +23,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          ref: docker-build
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -31,15 +36,15 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Use Node.js 20
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -59,3 +64,5 @@ jobs:
 
       - name: Run release-nightly
         run: npm run release-nightly
+        env:
+          RELEASE_REPO_NAMES: "teeks99/uptime-kuma"

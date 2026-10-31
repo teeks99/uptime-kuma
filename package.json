@@ -4,7 +4,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/louislam/uptime-kuma.git"
+        "url": "https://github.com/teeks99/uptime-kuma.git"
     },
     "engines": {
         "node": ">= 26.2.0"
@@ -35,11 +35,11 @@
         "playwright-codegen": "playwright codegen localhost:3000 --save-storage=./private/e2e-auth.json",
         "playwright-show-report": "playwright show-report ./private/playwright-report",
         "vite-preview-dist": "vite preview --host",
-        "build-docker-base": "docker buildx build -f docker/debian-base.dockerfile --platform linux/amd64,linux/arm64 -t louislam/uptime-kuma:base3 --target base3 . --push",
-        "build-docker-base-slim": "docker buildx build -f docker/debian-base.dockerfile --platform linux/amd64,linux/arm64 -t louislam/uptime-kuma:base3-slim --target base3-slim . --push",
-        "build-docker-builder-go": "docker buildx build -f docker/builder-go.dockerfile --platform linux/amd64,linux/arm64 -t louislam/uptime-kuma:builder-go3 . --push",
-        "build-docker-nightly-local": "node --run build && docker build -f docker/dockerfile -t louislam/uptime-kuma:nightly3 --target nightly .",
-        "build-docker-pr-test": "docker buildx build -f docker/dockerfile --platform linux/amd64,linux/arm64 -t louislam/uptime-kuma:pr-test3 --target pr-test3 . --push",
+        "build-docker-base": "docker buildx build -f docker/debian-base.dockerfile --platform linux/amd64,linux/arm64 -t teeks99/uptime-kuma:base3 --target base3 . --push",
+        "build-docker-base-slim": "docker buildx build -f docker/debian-base.dockerfile --platform linux/amd64,linux/arm64 -t teeks99/uptime-kuma:base3-slim --target base3-slim . --push",
+        "build-docker-builder-go": "docker buildx build -f docker/builder-go.dockerfile --platform linux/amd64,linux/arm64 -t teeks99/uptime-kuma:builder-go3 . --push",
+        "build-docker-nightly-local": "node --run build && docker build -f docker/dockerfile -t teeks99/uptime-kuma:nightly3 --target nightly .",
+        "build-docker-pr-test": "docker buildx build -f docker/dockerfile --platform linux/amd64,linux/arm64 -t teeks99/uptime-kuma:pr-test3 --target pr-test3 . --push",
         "upload-artifacts": "node extra/release/upload-artifacts.mjs",
         "upload-artifacts-beta": "node extra/release/upload-artifacts-beta.mjs",
         "setup": "git checkout 2.5.8 && npm ci --omit dev --no-audit && npm run download-dist",
