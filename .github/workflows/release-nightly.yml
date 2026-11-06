@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - docker-build
+      - local-tar-fix
   schedule:
     # Runs at 2:00 AM UTC every day
     - cron: "0 2 * * *"
