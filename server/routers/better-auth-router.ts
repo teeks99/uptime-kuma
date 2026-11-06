@@ -1,11 +1,12 @@
 import express from "express";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "../better-auth";
+import { Settings } from "../settings";
 import { R } from "redbean-node";
 import { log } from "../../src/util";
 
 // @ts-ignore
-import { allowDevOrigin, generalErrorResponse } from "../util";
+import { allowDevOrigin, generalErrorResponse, shouldSecureCookies, secureResponseCookies } from "../util";
 
 let processingSetup = false;
 let _hasUser = false;
@@ -22,6 +23,17 @@ export async function createBetterAuthRouter() {
     const betterAuthRouter = express.Router();
     betterAuthRouter.all("/api/auth/*", async (req, res) => {
         allowDevOrigin(req, res);
+
+        if (shouldSecureCookies(req)) {
+            secureResponseCookies(res);
+        }
+
+        // Trust Proxy off: the header is client-controlled, so replace it with the socket address
+        // A header is the only way to pass the socket IP to better-auth
+        if (!(await Settings.get("trustProxy"))) {
+            req.headers["x-forwarded-for"] = req.socket.remoteAddress;
+        }
+
         return toNodeHandler(auth())(req, res);
     });
 
