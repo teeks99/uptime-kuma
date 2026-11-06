@@ -132,6 +132,10 @@ const routes = [
                                 component: Proxies,
                             },
                             {
+                                path: "backup",
+                                component: () => import("./components/settings/Backup.vue"),
+                            },
+                            {
                                 path: "about",
                                 component: About,
                             },

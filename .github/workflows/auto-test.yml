@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [master, 1.23.X, 3.0.X]
+    branches: [master, 1.23.X, 3.0.X, docker-build]
   pull_request:
 permissions: {}
 
@@ -86,6 +86,7 @@ jobs:
         env:
           HEADLESS_TEST: 1
           JUST_FOR_TEST: ${{ secrets.JUST_FOR_TEST }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
 
   check-linters:
     runs-on: ubuntu-latest
