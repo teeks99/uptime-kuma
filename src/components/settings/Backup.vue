@@ -1,4 +1,3 @@
-<!--Comment to get CI kicked off -->
 <template>
     <div>
         <div class="my-4">
