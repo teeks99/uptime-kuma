@@ -726,6 +726,7 @@
     "Events cleared successfully": "Events cleared successfully.",
     "No monitors found": "No monitors found.",
     "Could not clear events": "Could not clear {failed}/{total} events",
+    "Hide child monitors": "Hide child monitors",
     "clearEventsMsg": "Are you sure you want to delete all events for this monitor? This permanently removes associated message data and cannot be undone.",
     "clearHeartbeatsMsg": "Are you sure you want to delete all heartbeats for this monitor? This permanently removes all heartbeat data and cannot be undone.",
     "confirmClearStatisticsMsg": "Are you sure you want to delete ALL statistics?",

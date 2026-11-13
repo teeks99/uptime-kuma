@@ -1086,13 +1086,23 @@ app.use(function (req, res, next) {
             }
         });
 
-        socket.on("monitorImportantHeartbeatListCount", async (monitorID, callback) => {
+        // For the important heartbeat lists of all monitors: leaves out the monitors that are in a group
+        const childMonitorFilter = (options) =>
+            options?.hideChildMonitors ? "AND monitor_id IN (SELECT id FROM monitor WHERE parent IS NULL)" : "";
+
+        socket.on("monitorImportantHeartbeatListCount", async (monitorID, options, callback) => {
+            // options is optional, (monitorID, callback) still works
+            if (typeof options === "function") {
+                callback = options;
+                options = {};
+            }
+
             try {
                 checkLogin(socket);
 
                 let count;
                 if (monitorID == null) {
-                    count = await R.count("heartbeat", "important = 1");
+                    count = await R.count("heartbeat", `important = 1 ${childMonitorFilter(options)}`);
                 } else {
                     count = await R.count("heartbeat", "monitor_id = ? AND important = 1", [monitorID]);
                 }
@@ -1109,7 +1119,13 @@ app.use(function (req, res, next) {
             }
         });
 
-        socket.on("monitorImportantHeartbeatListPaged", async (monitorID, offset, count, callback) => {
+        socket.on("monitorImportantHeartbeatListPaged", async (monitorID, offset, count, options, callback) => {
+            // options is optional, (monitorID, offset, count, callback) still works
+            if (typeof options === "function") {
+                callback = options;
+                options = {};
+            }
+
             try {
                 checkLogin(socket);
 
@@ -1119,6 +1135,7 @@ app.use(function (req, res, next) {
                         "heartbeat",
                         `
                         important = 1
+                        ${childMonitorFilter(options)}
                         ORDER BY time DESC
                         LIMIT ?
                         OFFSET ?
