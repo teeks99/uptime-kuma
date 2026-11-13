@@ -1086,9 +1086,10 @@ app.use(function (req, res, next) {
             }
         });
 
-        // For the important heartbeat lists of all monitors: leaves out the monitors that are in a group
-        const childMonitorFilter = (options) =>
-            options?.hideChildMonitors ? "AND monitor_id IN (SELECT id FROM monitor WHERE parent IS NULL)" : "";
+        // For the important heartbeat lists of all monitors: leaves out the group monitors, whose
+        // heartbeats only repeat what their child monitors reported
+        const groupMonitorFilter = (options) =>
+            options?.hideGroupMonitors ? "AND monitor_id NOT IN (SELECT id FROM monitor WHERE type = 'group')" : "";
 
         socket.on("monitorImportantHeartbeatListCount", async (monitorID, options, callback) => {
             // options is optional, (monitorID, callback) still works
@@ -1102,7 +1103,7 @@ app.use(function (req, res, next) {
 
                 let count;
                 if (monitorID == null) {
-                    count = await R.count("heartbeat", `important = 1 ${childMonitorFilter(options)}`);
+                    count = await R.count("heartbeat", `important = 1 ${groupMonitorFilter(options)}`);
                 } else {
                     count = await R.count("heartbeat", "monitor_id = ? AND important = 1", [monitorID]);
                 }
@@ -1135,7 +1136,7 @@ app.use(function (req, res, next) {
                         "heartbeat",
                         `
                         important = 1
-                        ${childMonitorFilter(options)}
+                        ${groupMonitorFilter(options)}
                         ORDER BY time DESC
                         LIMIT ?
                         OFFSET ?
