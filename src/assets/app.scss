@@ -523,6 +523,13 @@ optgroup {
             margin-left: -0.25rem;
         }
     }
+
+    .ui-compact & {
+        .item {
+            padding: 2px 15px 2px 15px;
+            font-size: 0.75rem;
+        }
+    }
 }
 
 .alert-success {

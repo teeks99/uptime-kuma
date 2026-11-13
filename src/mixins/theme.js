@@ -4,6 +4,7 @@ export default {
             system: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
             userTheme: localStorage.theme,
             userHeartbeatBar: localStorage.heartbeatBarTheme,
+            userMonitorListLayout: localStorage.monitorListLayout,
             styleElapsedTime: localStorage.styleElapsedTime,
             statusPageTheme: "light",
             forceStatusPageTheme: false,
@@ -22,12 +23,20 @@ export default {
             this.userHeartbeatBar = "normal";
         }
 
+        // Default Monitor List Layout
+        if (!this.userMonitorListLayout) {
+            this.userMonitorListLayout = "normal";
+        }
+
         // Default Elapsed Time Style
         if (!this.styleElapsedTime) {
             this.styleElapsedTime = "no-line";
         }
 
         document.body.classList.add(this.theme);
+        if (this.userMonitorListLayout === "compact") {
+            document.body.classList.add("ui-compact");
+        }
         this.updateThemeColorMeta();
     },
 
@@ -85,6 +94,15 @@ export default {
 
         userHeartbeatBar(to, from) {
             localStorage.heartbeatBarTheme = to;
+        },
+
+        userMonitorListLayout(to, from) {
+            localStorage.monitorListLayout = to;
+            if (to === "compact") {
+                document.body.classList.add("ui-compact");
+            } else {
+                document.body.classList.remove("ui-compact");
+            }
         },
 
         heartbeatBarTheme(to, from) {

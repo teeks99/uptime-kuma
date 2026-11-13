@@ -295,6 +295,11 @@ export default {
         },
     },
     watch: {
+        "$root.userMonitorListLayout"() {
+            this.updateDimensions();
+            this.resize();
+            this.drawCanvas();
+        },
         beatList: {
             handler(newVal) {
                 // A reconnect clears the list and the login sends one beat; fetch the history again
@@ -346,24 +351,7 @@ export default {
     },
 
     mounted() {
-        if (this.size !== "big") {
-            this.beatWidth = 5;
-            this.beatHeight = 16;
-            this.beatHoverAreaPadding = 2;
-        }
-
-        // Suddenly, have an idea how to handle it universally.
-        // If the pixel * ratio != Integer, then it causes render issue, round it to solve it!!
-        const actualWidth = this.beatWidth * window.devicePixelRatio;
-        const actualHoverAreaPadding = this.beatHoverAreaPadding * window.devicePixelRatio;
-
-        if (!Number.isInteger(actualWidth)) {
-            this.beatWidth = Math.round(actualWidth) / window.devicePixelRatio;
-        }
-
-        if (!Number.isInteger(actualHoverAreaPadding)) {
-            this.beatHoverAreaPadding = Math.round(actualHoverAreaPadding) / window.devicePixelRatio;
-        }
+        this.updateDimensions();
 
         window.addEventListener("resize", this.resize);
         this.resize();
@@ -376,6 +364,32 @@ export default {
         this.requestHistory();
     },
     methods: {
+        updateDimensions() {
+            if (this.size !== "big") {
+                this.beatWidth = 5;
+                this.beatHeight = 16;
+                this.beatHoverAreaPadding = 2;
+            } else {
+                this.beatWidth = 10;
+                this.beatHeight = 30;
+                this.beatHoverAreaPadding = 4;
+            }
+
+            if (this.$root.userMonitorListLayout === "compact") {
+                this.beatHeight = this.beatHeight / 2;
+            }
+
+            const actualWidth = this.beatWidth * window.devicePixelRatio;
+            const actualHoverAreaPadding = this.beatHoverAreaPadding * window.devicePixelRatio;
+
+            if (!Number.isInteger(actualWidth)) {
+                this.beatWidth = Math.round(actualWidth) / window.devicePixelRatio;
+            }
+
+            if (!Number.isInteger(actualHoverAreaPadding)) {
+                this.beatHoverAreaPadding = Math.round(actualHoverAreaPadding) / window.devicePixelRatio;
+            }
+        },
         /**
          * Fetch the 100-beat history for this row on demand.
          * The login only sends the latest beat, so off-screen monitors cost nothing.
