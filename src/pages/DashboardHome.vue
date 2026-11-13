@@ -37,9 +37,20 @@
             </div>
 
             <div class="shadow-box table-shadow-box table-wrapper">
-                <div class="mb-3 text-end">
+                <div class="mb-3 d-flex align-items-center">
+                    <div v-if="hasGroupMonitors" class="form-check form-switch">
+                        <input
+                            id="hide-group-events"
+                            v-model="hideGroupEvents"
+                            class="form-check-input"
+                            type="checkbox"
+                        />
+                        <label class="form-check-label" for="hide-group-events">
+                            {{ $t("Hide group events") }}
+                        </label>
+                    </div>
                     <button
-                        class="btn btn-sm btn-outline-danger"
+                        class="btn btn-sm btn-outline-danger ms-auto"
                         :disabled="clearingAllEvents"
                         @click="clearAllEventsDialog"
                     >
@@ -143,6 +154,7 @@ export default {
             importantHeartBeatListLength: 0,
             displayedRecords: [],
             clearingAllEvents: false,
+            hideGroupEvents: localStorage.getItem("hideGroupEvents") === "1",
         };
     },
     computed: {
@@ -151,6 +163,9 @@ export default {
         },
         tableColumnCount() {
             return this.showGroupColumn ? 5 : 4;
+        },
+        hasGroupMonitors() {
+            return Object.values(this.$root.monitorList).some((m) => m.type === "group");
         },
     },
     watch: {
@@ -162,6 +177,12 @@ export default {
 
         page() {
             this.getImportantHeartbeatListPaged();
+        },
+
+        hideGroupEvents(hide) {
+            localStorage.setItem("hideGroupEvents", hide ? "1" : "0");
+            this.page = 1;
+            this.getImportantHeartbeatListLength();
         },
     },
 
@@ -213,6 +234,10 @@ export default {
          * @returns {void}
          */
         onNewImportantHeartbeat(heartbeat) {
+            if (this.hideGroupEvents && this.$root.monitorList[heartbeat.monitorID]?.type === "group") {
+                return;
+            }
+
             if (this.page === 1) {
                 this.displayedRecords.unshift(heartbeat);
                 if (this.displayedRecords.length > this.perPage) {
@@ -227,7 +252,8 @@ export default {
          * @returns {void}
          */
         getImportantHeartbeatListLength() {
-            this.$root.getSocket().emit("monitorImportantHeartbeatListCount", null, (res) => {
+            const options = { hideGroupMonitors: this.hideGroupEvents };
+            this.$root.getSocket().emit("monitorImportantHeartbeatListCount", null, options, (res) => {
                 if (res.ok) {
                     this.importantHeartBeatListLength = res.count;
                     this.getImportantHeartbeatListPaged();
@@ -241,7 +267,9 @@ export default {
          */
         getImportantHeartbeatListPaged() {
             const offset = (this.page - 1) * this.perPage;
-            this.$root.getSocket().emit("monitorImportantHeartbeatListPaged", null, offset, this.perPage, (res) => {
+            const options = { hideGroupMonitors: this.hideGroupEvents };
+            const socket = this.$root.getSocket();
+            socket.emit("monitorImportantHeartbeatListPaged", null, offset, this.perPage, options, (res) => {
                 if (res.ok) {
                     this.displayedRecords = res.data;
                 }

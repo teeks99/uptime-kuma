@@ -1085,13 +1085,24 @@ app.use(function (req, res, next) {
             }
         });
 
-        socket.on("monitorImportantHeartbeatListCount", async (monitorID, callback) => {
+        // For the important heartbeat lists of all monitors: leaves out the group monitors, whose
+        // heartbeats only repeat what their child monitors reported
+        const groupMonitorFilter = (options) =>
+            options?.hideGroupMonitors ? "AND monitor_id NOT IN (SELECT id FROM monitor WHERE type = 'group')" : "";
+
+        socket.on("monitorImportantHeartbeatListCount", async (monitorID, options, callback) => {
+            // options is optional, (monitorID, callback) still works
+            if (typeof options === "function") {
+                callback = options;
+                options = {};
+            }
+
             try {
                 checkLogin(socket);
 
                 let count;
                 if (monitorID == null) {
-                    count = await R.count("heartbeat", "important = 1");
+                    count = await R.count("heartbeat", `important = 1 ${groupMonitorFilter(options)}`);
                 } else {
                     count = await R.count("heartbeat", "monitor_id = ? AND important = 1", [monitorID]);
                 }
@@ -1108,7 +1119,13 @@ app.use(function (req, res, next) {
             }
         });
 
-        socket.on("monitorImportantHeartbeatListPaged", async (monitorID, offset, count, callback) => {
+        socket.on("monitorImportantHeartbeatListPaged", async (monitorID, offset, count, options, callback) => {
+            // options is optional, (monitorID, offset, count, callback) still works
+            if (typeof options === "function") {
+                callback = options;
+                options = {};
+            }
+
             try {
                 checkLogin(socket);
 
@@ -1118,6 +1135,7 @@ app.use(function (req, res, next) {
                         "heartbeat",
                         `
                         important = 1
+                        ${groupMonitorFilter(options)}
                         ORDER BY time DESC
                         LIMIT ?
                         OFFSET ?
