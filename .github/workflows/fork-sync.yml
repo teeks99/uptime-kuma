@@ -1,0 +1,157 @@
+name: Fork Sync
+
+# Merges louislam/uptime-kuma into this fork's branches every day (the order is in
+# .github/fork-sync/merge.sh). docker-build is built into an image and smoke tested before
+# anything is pushed. A merge conflict or a failed test pushes nothing and opens an issue.
+# Pushing docker-build starts Nightly Release (release-nightly.yml), which publishes the images.
+#
+# Needs a FORK_SYNC_TOKEN secret: a fine-grained token for this repository with Contents and
+# Workflows set to read and write. The default GITHUB_TOKEN can't push changes to workflow
+# files, which upstream makes often, and its pushes wouldn't start Nightly Release.
+
+on:
+  schedule:
+    - cron: "13 9 * * *" # 09:13 UTC every day
+  workflow_dispatch: # Allow manual trigger
+
+permissions: {}
+
+concurrency:
+  group: fork-sync
+
+jobs:
+  merge-and-test:
+    if: github.repository == 'teeks99/uptime-kuma'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.merge.outputs.changed }}
+      start: ${{ steps.merge.outputs.start }}
+      result: ${{ steps.merge.outputs.result }}
+      merge_date: ${{ steps.merge.outputs.merge_date }}
+      problem: ${{ steps.merge.outputs.problem }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Merge upstream into the fork's branches
+        id: merge
+        run: .github/fork-sync/merge.sh
+
+      - name: Check out the merged docker-build
+        if: steps.merge.outputs.changed == 'true'
+        env:
+          DOCKER_BUILD: ${{ steps.merge.outputs.docker_build }}
+        run: git checkout --quiet --detach "$DOCKER_BUILD"
+
+      # Build the image the way release-nightly.yml does, for amd64 only
+      - name: Use Node.js 20
+        if: steps.merge.outputs.changed == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+
+      - name: Install dependencies and build the frontend
+        if: steps.merge.outputs.changed == 'true'
+        run: npm clean-install --no-fund && npm run build
+
+      - name: Build the nightly image
+        if: steps.merge.outputs.changed == 'true'
+        run: docker build --file docker/dockerfile --target nightly --tag uptime-kuma:fork-sync .
+
+      - name: Smoke test the image
+        if: steps.merge.outputs.changed == 'true'
+        run: .github/fork-sync/smoke-test.sh uptime-kuma:fork-sync
+
+  # A separate job, so the token is never on a machine that ran npm packages' install scripts
+  push:
+    needs: merge-and-test
+    if: needs.merge-and-test.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # The same starting commits and date make the same commits that were tested
+      - name: Repeat the tested merges
+        id: merge
+        env:
+          START: ${{ needs.merge-and-test.outputs.start }}
+          MERGE_DATE: ${{ needs.merge-and-test.outputs.merge_date }}
+          EXPECT: ${{ needs.merge-and-test.outputs.result }}
+        run: .github/fork-sync/merge.sh
+
+      - name: Push
+        env:
+          TOKEN: ${{ secrets.FORK_SYNC_TOKEN }}
+          REFSPECS: ${{ steps.merge.outputs.push }}
+        run: |
+          if [[ -z $TOKEN ]]; then
+              echo "::error::The FORK_SYNC_TOKEN secret is missing"
+              exit 1
+          fi
+          # All branches or none. Not forced, so a branch that moved since the merge is
+          # rejected instead of overwritten.
+          read -ra refspecs <<< "$REFSPECS"
+          git push --atomic "https://x-access-token:$TOKEN@github.com/$GITHUB_REPOSITORY.git" "${refspecs[@]}"
+
+  report:
+    needs: [merge-and-test, push]
+    if: ${{ !cancelled() && github.repository == 'teeks99/uptime-kuma' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write # open, comment on and close the sync issue
+
+    steps:
+      - name: Open, update or close the sync issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TESTED: ${{ needs.merge-and-test.result }}
+          PUSHED: ${{ needs.push.result }}
+          PROBLEM: ${{ needs.merge-and-test.outputs.problem }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Fork sync failed"
+          issue=$(gh issue list --state open --limit 100 --json number,title \
+              --jq "map(select(.title == \"$title\"))[0].number // empty") || issue=""
+
+          # PUSHED is skipped when there was nothing new to push
+          if [[ $TESTED == success && $PUSHED != failure ]]; then
+              if [[ -n $issue ]]; then
+                  gh issue close "$issue" --comment "Fixed: [this run]($RUN_URL) synced cleanly."
+              fi
+              exit 0
+          fi
+
+          if [[ -n $PROBLEM ]]; then
+              problem="$PROBLEM."
+              fix="Do the merges by hand, sort out the problem and push."
+          elif [[ $TESTED != success ]]; then
+              problem="Merging or smoke testing failed, the run shows which step."
+              fix="Fix the problem on the branch it belongs to and push."
+          else
+              problem="Pushing the merged branches failed."
+              fix="If the log shows an authentication error, add or renew the FORK_SYNC_TOKEN secret. If a branch changed while the sync ran, nothing needs fixing."
+          fi
+          body="$problem Nothing was pushed, so the branches and images are unchanged. Details are in [the run]($RUN_URL).
+
+          $fix Then run Fork Sync again from the Actions tab, or wait for the next scheduled run. Each failed run adds a comment here, and the first clean run closes this issue."
+
+          if [[ -n $issue ]]; then
+              gh issue comment "$issue" --body "$body"
+          else
+              gh issue create --title "$title" --body "$body" --assignee "$GITHUB_REPOSITORY_OWNER"
+          fi
