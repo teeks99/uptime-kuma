@@ -37,9 +37,20 @@
             </div>
 
             <div class="shadow-box table-shadow-box table-wrapper">
-                <div class="mb-3 text-end">
+                <div class="mb-3 d-flex align-items-center">
+                    <div v-if="hasChildMonitors" class="form-check form-switch">
+                        <input
+                            id="hide-child-monitor-events"
+                            v-model="hideChildMonitorEvents"
+                            class="form-check-input"
+                            type="checkbox"
+                        />
+                        <label class="form-check-label" for="hide-child-monitor-events">
+                            {{ $t("Hide child monitors") }}
+                        </label>
+                    </div>
                     <button
-                        class="btn btn-sm btn-outline-danger"
+                        class="btn btn-sm btn-outline-danger ms-auto"
                         :disabled="clearingAllEvents"
                         @click="clearAllEventsDialog"
                     >
@@ -143,11 +154,16 @@ export default {
             importantHeartBeatListLength: 0,
             displayedRecords: [],
             clearingAllEvents: false,
+            hideChildMonitorEvents: localStorage.getItem("hideChildMonitorEvents") === "1",
         };
     },
     computed: {
-        showGroupColumn() {
+        hasChildMonitors() {
             return Object.values(this.$root.monitorList).some((m) => m.parent != null);
+        },
+        showGroupColumn() {
+            // Without the child monitors, no event has a group
+            return this.hasChildMonitors && !this.hideChildMonitorEvents;
         },
         tableColumnCount() {
             return this.showGroupColumn ? 5 : 4;
@@ -162,6 +178,12 @@ export default {
 
         page() {
             this.getImportantHeartbeatListPaged();
+        },
+
+        hideChildMonitorEvents(hide) {
+            localStorage.setItem("hideChildMonitorEvents", hide ? "1" : "0");
+            this.page = 1;
+            this.getImportantHeartbeatListLength();
         },
     },
 
@@ -213,6 +235,10 @@ export default {
          * @returns {void}
          */
         onNewImportantHeartbeat(heartbeat) {
+            if (this.hideChildMonitorEvents && this.getGroupId(heartbeat.monitorID) != null) {
+                return;
+            }
+
             if (this.page === 1) {
                 this.displayedRecords.unshift(heartbeat);
                 if (this.displayedRecords.length > this.perPage) {
@@ -227,7 +253,8 @@ export default {
          * @returns {void}
          */
         getImportantHeartbeatListLength() {
-            this.$root.getSocket().emit("monitorImportantHeartbeatListCount", null, (res) => {
+            const options = { hideChildMonitors: this.hideChildMonitorEvents };
+            this.$root.getSocket().emit("monitorImportantHeartbeatListCount", null, options, (res) => {
                 if (res.ok) {
                     this.importantHeartBeatListLength = res.count;
                     this.getImportantHeartbeatListPaged();
@@ -241,7 +268,9 @@ export default {
          */
         getImportantHeartbeatListPaged() {
             const offset = (this.page - 1) * this.perPage;
-            this.$root.getSocket().emit("monitorImportantHeartbeatListPaged", null, offset, this.perPage, (res) => {
+            const options = { hideChildMonitors: this.hideChildMonitorEvents };
+            const socket = this.$root.getSocket();
+            socket.emit("monitorImportantHeartbeatListPaged", null, offset, this.perPage, options, (res) => {
                 if (res.ok) {
                     this.displayedRecords = res.data;
                 }
