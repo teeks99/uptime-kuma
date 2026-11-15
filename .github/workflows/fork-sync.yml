@@ -68,7 +68,8 @@ jobs:
         if: steps.merge.outputs.changed == 'true'
         run: .github/fork-sync/smoke-test.sh uptime-kuma:fork-sync
 
-  # A separate job, so the token is never on a machine that ran npm packages' install scripts
+  # A separate job, so the token is never in the environment of a step that runs npm packages'
+  # install scripts
   push:
     needs: merge-and-test
     if: needs.merge-and-test.outputs.changed == 'true'
@@ -76,6 +77,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    outputs:
+      reason: ${{ steps.push.outputs.reason }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,18 +96,35 @@ jobs:
         run: .github/fork-sync/merge.sh
 
       - name: Push
+        id: push
         env:
           TOKEN: ${{ secrets.FORK_SYNC_TOKEN }}
           REFSPECS: ${{ steps.merge.outputs.push }}
         run: |
+          # A token has no spaces or line breaks, but a pasted secret can
+          TOKEN=${TOKEN//[[:space:]]/}
           if [[ -z $TOKEN ]]; then
+              echo "reason=The FORK_SYNC_TOKEN secret is missing." >> "$GITHUB_OUTPUT"
               echo "::error::The FORK_SYNC_TOKEN secret is missing"
               exit 1
           fi
+          echo "::add-mask::$TOKEN"
           # All branches or none. Not forced, so a branch that moved since the merge is
           # rejected instead of overwritten.
           read -ra refspecs <<< "$REFSPECS"
-          git push --atomic "https://x-access-token:$TOKEN@github.com/$GITHUB_REPOSITORY.git" "${refspecs[@]}"
+          log=$RUNNER_TEMP/push.log
+          status=0
+          git push --atomic "https://x-access-token:$TOKEN@github.com/$GITHUB_REPOSITORY.git" "${refspecs[@]}" 2> "$log" || status=$?
+          cat "$log" >&2
+          if ((status != 0)); then
+              # What git and GitHub said, for the sync issue
+              {
+                  echo "reason<<END_OF_REASON"
+                  grep -E '^(remote: |fatal: | ! )' "$log" | head -n 10 || true
+                  echo "END_OF_REASON"
+              } >> "$GITHUB_OUTPUT"
+          fi
+          exit "$status"
 
   report:
     needs: [merge-and-test, push]
@@ -122,6 +142,7 @@ jobs:
           TESTED: ${{ needs.merge-and-test.result }}
           PUSHED: ${{ needs.push.result }}
           PROBLEM: ${{ needs.merge-and-test.outputs.problem }}
+          PUSH_REASON: ${{ needs.push.outputs.reason }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           title="Fork sync failed"
@@ -136,6 +157,7 @@ jobs:
               exit 0
           fi
 
+          reason=""
           if [[ -n $PROBLEM ]]; then
               problem="$PROBLEM."
               fix="Do the merges by hand, sort out the problem and push."
@@ -144,11 +166,14 @@ jobs:
               fix="Fix the problem on the branch it belongs to and push."
           else
               problem="Pushing the merged branches failed."
-              fix="If the log shows an authentication error, add or renew the FORK_SYNC_TOKEN secret. If a branch changed while the sync ran, nothing needs fixing."
+              reason=$PUSH_REASON
+              fix="For an authentication or permission error, save a new token in the FORK_SYNC_TOKEN secret: a fine-grained one that can access this repository, with Contents and Workflows set to read and write. If a branch changed while the sync ran (fetch first), nothing needs fixing."
           fi
-          body="$problem Nothing was pushed, so the branches and images are unchanged. Details are in [the run]($RUN_URL).
-
-          $fix Then run Fork Sync again from the Actions tab, or wait for the next scheduled run. Each failed run adds a comment here, and the first clean run closes this issue."
+          body="$problem Nothing was pushed, so the branches and images are unchanged. Details are in [the run]($RUN_URL)."
+          if [[ -n $reason ]]; then
+              body+=$'\n\n```\n'"$reason"$'\n```'
+          fi
+          body+=$'\n\n'"$fix Then run Fork Sync again from the Actions tab, or wait for the next scheduled run. Each failed run adds a comment here, and the first clean run closes this issue."
 
           if [[ -n $issue ]]; then
               gh issue comment "$issue" --body "$body"
