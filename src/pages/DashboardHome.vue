@@ -56,6 +56,13 @@
                     >
                         {{ $t("Clear All Events") }}
                     </button>
+                    <button
+                        class="btn btn-sm btn-outline-primary ms-2"
+                        data-testid="export-events-button"
+                        @click="$refs.eventExportDialog.show()"
+                    >
+                        {{ $t("Export") }}
+                    </button>
                 </div>
                 <table class="table table-borderless table-hover">
                     <thead>
@@ -120,6 +127,8 @@
     >
         {{ $t("clearAllEventsMsg") }}
     </Confirm>
+    <!-- The export leaves out what the list hides. This page only has a hideGroupEvents if the switch for it is there. -->
+    <EventExportDialog ref="eventExportDialog" :hide-group-events="$data.hideGroupEvents === true" />
     <router-view ref="child" />
 </template>
 
@@ -128,6 +137,7 @@ import Status from "../components/Status.vue";
 import Datetime from "../components/Datetime.vue";
 import Pagination from "v-pagination-3";
 import Confirm from "../components/Confirm.vue";
+import EventExportDialog from "../components/EventExportDialog.vue";
 
 export default {
     components: {
@@ -135,6 +145,7 @@ export default {
         Status,
         Pagination,
         Confirm,
+        EventExportDialog,
     },
     props: {
         calculatedHeight: {
