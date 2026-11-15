@@ -2,8 +2,11 @@
 # Merges louislam/uptime-kuma into this fork's branches, for the Fork Sync workflow:
 #
 #   upstream master -> master (fast-forward only, master is a pure mirror)
-#   master -> each feature branch
+#   master -> each feature branch, only when UPDATE_FEATURES is "true" (the weekly run)
 #   master, then each feature branch -> docker-build
+#
+# So on other runs the feature branches stay as they are, and docker-build only takes their
+# commits that it doesn't have yet.
 #
 # The merges are made with git merge-tree and git commit-tree, so the working tree and the
 # local branches are left alone, and nothing is pushed. The new branch tips are written as
@@ -78,9 +81,11 @@ if ! git merge-base --is-ancestor "${start[master]}" "${start[upstream]}"; then
     stop "master has commits that upstream master doesn't, so it can't be fast-forwarded"
 fi
 tip[master]=${start[upstream]}
-for branch in "${features[@]}"; do
-    tip[$branch]=$(merge master "$branch")
-done
+if [[ ${UPDATE_FEATURES:-} == true ]]; then
+    for branch in "${features[@]}"; do
+        tip[$branch]=$(merge master "$branch")
+    done
+fi
 for branch in master "${features[@]}"; do
     tip[docker-build]=$(merge "$branch" docker-build)
 done

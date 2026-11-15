@@ -1,9 +1,11 @@
 name: Fork Sync
 
-# Merges louislam/uptime-kuma into this fork's branches every day (the order is in
-# .github/fork-sync/merge.sh). docker-build is built into an image and smoke tested before
-# anything is pushed. A merge conflict or a failed test pushes nothing and opens an issue.
-# Pushing docker-build starts Nightly Release (release-nightly.yml), which publishes the images.
+# Merges louislam/uptime-kuma into this fork's branches (the order is in
+# .github/fork-sync/merge.sh). Every day master and any new feature branch commits go into
+# docker-build; on Sundays master also goes into the feature branches. docker-build is built
+# into an image and smoke tested before anything is pushed. A merge conflict or a failed test
+# pushes nothing and opens an issue. Pushing docker-build starts Nightly Release
+# (release-nightly.yml), which publishes the images.
 #
 # Needs a FORK_SYNC_TOKEN secret: a fine-grained token for this repository with Contents and
 # Workflows set to read and write. The default GITHUB_TOKEN can't push changes to workflow
@@ -11,13 +13,24 @@ name: Fork Sync
 
 on:
   schedule:
-    - cron: "13 9 * * *" # 09:13 UTC every day
+    - cron: "13 9 * * 1-6" # 09:13 UTC, Monday to Saturday
+    - cron: "13 9 * * 0" # 09:13 UTC on Sundays, which also update the feature branches
   workflow_dispatch: # Allow manual trigger
+    inputs:
+      update-features:
+        description: Also merge master into the feature branches, like the Sunday run
+        type: boolean
+        default: false
 
 permissions: {}
 
 concurrency:
   group: fork-sync
+
+env:
+  # "true" on the Sunday run (the second cron above, keep the two in step) and on manual runs
+  # that ask for it. The push job reads it too, so it repeats exactly the merges that were tested.
+  UPDATE_FEATURES: ${{ github.event.schedule == '13 9 * * 0' || inputs.update-features }}
 
 jobs:
   merge-and-test:
@@ -145,17 +158,35 @@ jobs:
           PUSH_REASON: ${{ needs.push.outputs.reason }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          title="Fork sync failed"
-          issue=$(gh issue list --state open --limit 100 --json number,title \
-              --jq "map(select(.title == \"$title\"))[0].number // empty") || issue=""
+          # open_issue <title>: prints the number of the open issue with that title, if any
+          open_issue() {
+              gh issue list --state open --limit 100 --json number,title \
+                  --jq "map(select(.title == \"$1\"))[0].number // empty" || true
+          }
+
+          # The weekly run has its own issue, so a clean daily run, which leaves the feature
+          # branches alone, can't close an issue about them
+          if [[ $UPDATE_FEATURES == true ]]; then
+              title="Fork sync of the feature branches failed"
+              closes=("$title" "Fork sync failed")
+              rerun="run Fork Sync again from the Actions tab with \"Also merge master into the feature branches\" ticked, or wait for next Sunday's run"
+          else
+              title="Fork sync failed"
+              closes=("$title")
+              rerun="run Fork Sync again from the Actions tab, or wait for the next scheduled run"
+          fi
 
           # PUSHED is skipped when there was nothing new to push
           if [[ $TESTED == success && $PUSHED != failure ]]; then
-              if [[ -n $issue ]]; then
-                  gh issue close "$issue" --comment "Fixed: [this run]($RUN_URL) synced cleanly."
-              fi
+              for each in "${closes[@]}"; do
+                  issue=$(open_issue "$each")
+                  if [[ -n $issue ]]; then
+                      gh issue close "$issue" --comment "Fixed: [this run]($RUN_URL) synced cleanly."
+                  fi
+              done
               exit 0
           fi
+          issue=$(open_issue "$title")
 
           reason=""
           if [[ -n $PROBLEM ]]; then
@@ -173,7 +204,7 @@ jobs:
           if [[ -n $reason ]]; then
               body+=$'\n\n```\n'"$reason"$'\n```'
           fi
-          body+=$'\n\n'"$fix Then run Fork Sync again from the Actions tab, or wait for the next scheduled run. Each failed run adds a comment here, and the first clean run closes this issue."
+          body+=$'\n\n'"$fix Then $rerun. Each failed run adds a comment here, and the first clean run closes this issue."
 
           if [[ -n $issue ]]; then
               gh issue comment "$issue" --body "$body"
