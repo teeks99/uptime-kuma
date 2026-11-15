@@ -15,7 +15,7 @@ set -euo pipefail
 shopt -s inherit_errexit
 
 # The long-lived feature branches, merged into docker-build in this order
-features=(backup-restore ui-size)
+features=(backup-restore ui-size toggle-child-events event-log-export)
 branches=(master "${features[@]}" docker-build)
 out=${GITHUB_OUTPUT:-/dev/stderr}
 summary=${GITHUB_STEP_SUMMARY:-/dev/stderr}
